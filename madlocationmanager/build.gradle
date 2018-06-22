@@ -3,15 +3,15 @@ apply plugin: 'com.github.dcendents.android-maven'
 group='com.github.maddevsio'
 
 ext {
-    supportLibraryVersion = "26.1.0"
+    supportLibraryVersion = "27.1.1"
 }
 
 android {
-    compileSdkVersion 26
-    buildToolsVersion "${supportLibraryVersion}"
+    compileSdkVersion 27
+    buildToolsVersion "27.0.3"
     defaultConfig {
         minSdkVersion 18
-        targetSdkVersion 26
+        targetSdkVersion 27
         versionCode 1
         versionName "1.0"
 
