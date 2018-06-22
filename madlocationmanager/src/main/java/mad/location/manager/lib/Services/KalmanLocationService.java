@@ -29,6 +29,10 @@ import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.PriorityBlockingQueue;
 
+import io.reactivex.Observable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 import mad.location.manager.lib.Commons.Coordinates;
 import mad.location.manager.lib.Commons.GeoPoint;
 import mad.location.manager.lib.Commons.SensorGpsDataItem;
@@ -88,6 +92,9 @@ public class KalmanLocationService extends Service
     protected Location m_lastLocation;
 
     protected ServiceStatus m_serviceStatus = ServiceStatus.SERVICE_STOPPED;
+
+    private Disposable m_locationDisposable;
+    private Observable<Location> m_locationObservable;
 
     public enum ServiceStatus {
         PERMISSION_DENIED(0),
@@ -418,8 +425,18 @@ public class KalmanLocationService extends Service
             m_locationManager.removeGpsStatusListener(this);
             m_locationManager.addGpsStatusListener(this);
             m_locationManager.removeUpdates(this);
-            m_locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
-                    m_settings.gpsMinTime, m_settings.gpsMinDistance, this );
+            if (m_locationObservable == null) {
+                m_locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,
+                        m_settings.gpsMinTime, m_settings.gpsMinDistance, this);
+            } else {
+                m_locationDisposable = m_locationObservable.observeOn(Schedulers.computation())
+                        .subscribe(new Consumer<Location>() {
+                            @Override
+                            public void accept(Location location) {
+                                onLocationChanged(location);
+                            }
+                        });
+            }
         }
 
         m_sensorsEnabled = true;
@@ -450,6 +467,10 @@ public class KalmanLocationService extends Service
             m_serviceStatus = ServiceStatus.SERVICE_PAUSED;
             m_locationManager.removeGpsStatusListener(this);
             m_locationManager.removeUpdates(this);
+            if (m_locationDisposable != null) {
+                m_locationDisposable.dispose();
+                m_locationDisposable = null;
+            }
         }
 
         if (m_geoHashRTFilter != null) {
@@ -483,6 +504,10 @@ public class KalmanLocationService extends Service
             m_geoHashRTFilter = new GeohashRTFilter(m_settings.geoHashPrecision,
                     m_settings.geoHashMinPointCount);
         }
+    }
+
+    public void setLocationObservable(Observable<Location> locationObservable) {
+        m_locationObservable = locationObservable;
     }
 
     /*SensorEventListener methods implementation*/
